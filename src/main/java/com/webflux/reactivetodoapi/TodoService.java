@@ -32,12 +32,14 @@ public class TodoService {
         return  Mono.just(todo);
     }
 
-    public Mono<Void> deleteById(Long id) {
-          return Mono.justOrEmpty(store.remove(id))
-                  .then();
+    public Mono<Todo> deleteById(Long id) {
+        store.put(1L,new Todo(1L,"hi",false));
+        Todo removed = store.remove(id);
+          return Mono.justOrEmpty(removed);
     }
 
     public Mono<Todo> updateTodoStatus(Boolean completed, Long id) {
+        store.put(1L,new Todo(1L,"hi",false));
        return Mono.justOrEmpty(store.get(id))
                        .map(todo -> {
                            todo.setCompleted(completed);
