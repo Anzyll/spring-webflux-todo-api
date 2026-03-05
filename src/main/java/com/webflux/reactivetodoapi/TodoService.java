@@ -1,52 +1,62 @@
 package com.webflux.reactivetodoapi;
 
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-
-import java.time.Duration;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicLong;
-
 @Service
+@RequiredArgsConstructor
 public class TodoService {
-    Map<Long,Todo> store = new ConcurrentHashMap<>();
-    private final AtomicLong idGenerator = new AtomicLong();
-    public Flux<Todo> findAll() {
-        store.put(1L,new Todo(1L,"hi",true));
-       return Flux.fromIterable(store.values())
-               .doOnNext(todo -> System.out.println("Thread :" + Thread.currentThread().getName()))
-               .delayElements(Duration.ofMillis(200));
+    private final TodoRepository todoRepository;
+    public Flux<ResponseDto> findAll() {
+       return todoRepository.findAll()
+               .map(todo -> new ResponseDto(
+                       todo.getId(),
+                       todo.getTitle(),
+                       todo.isCompleted()
+               ));
     }
 
-    public Mono<Todo> findById(Long id) {
-        return Mono.justOrEmpty(store.get(id));
+    public Mono<ResponseDto> findById(Long id) {
+        return todoRepository.findById(id)
+                .map(todo -> new ResponseDto(
+                        todo.getId(),
+                        todo.getTitle(),
+                        todo.isCompleted()
+                ))
+                .switchIfEmpty(Mono.error(new TodoNotFoundException(id)));
     }
 
-    public Mono<Todo> save(Todo todo) {
-        if(todo.getId()==null){
-            todo.setId(idGenerator.incrementAndGet());
-        }
-        store.put(todo.getId(), todo);
-        return  Mono.just(todo);
+    public Mono<ResponseDto> save(RequestDto request) {
+        Todo todo = new Todo();
+        todo.setTitle(request.title());
+        todo.setCompleted(false);
+       return todoRepository.save(todo)
+               .map(t -> new ResponseDto(
+                       t.getId(),
+                       t.getTitle(),
+                       t.isCompleted()
+               ));
     }
 
-    public Mono<Todo> deleteById(Long id) {
-        store.put(1L,new Todo(1L,"hi",false));
-        Todo removed = store.remove(id);
-          return Mono.justOrEmpty(removed);
+    public Mono<Void> deleteById(Long id) {
+        return todoRepository.findById(id)
+                .switchIfEmpty(Mono.error(new TodoNotFoundException(id)))
+                .flatMap(todo -> todoRepository.deleteById(id));
     }
 
-    public Mono<Todo> updateTodoStatus(Boolean completed, Long id) {
-        store.put(1L,new Todo(1L,"hi",false));
-       return Mono.justOrEmpty(store.get(id))
-                       .map(todo -> {
-                           todo.setCompleted(completed);
-                           store.put(id,todo);
-                           return todo;
-                       });
-
-
+    public Mono<ResponseDto> updateTodoStatus(Boolean completed, Long id) {
+               return  todoRepository.findById(id)
+                       .switchIfEmpty(Mono.error(new TodoNotFoundException(id)))
+                       .map(t -> {
+                        t.setCompleted(completed);
+                        return t;
+                         })
+                       .flatMap(todoRepository::save)
+                       .map(todo -> new ResponseDto(
+                               todo.getId(),
+                               todo.getTitle(),
+                               todo.isCompleted()
+                       ));
     }
 }
