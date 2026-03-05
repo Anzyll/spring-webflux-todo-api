@@ -1,15 +1,20 @@
 package com.webflux.reactivetodoapi;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+
+import java.time.Duration;
+
 @Service
 @RequiredArgsConstructor
 public class TodoService {
     private final TodoRepository todoRepository;
-    public Flux<ResponseDto> findAll() {
-       return todoRepository.findAll()
+    public Flux<ResponseDto> findAll(int page,int size) {
+        int offset = page * size;
+       return todoRepository.findAllPaged(size,offset)
                .map(todo -> new ResponseDto(
                        todo.getId(),
                        todo.getTitle(),

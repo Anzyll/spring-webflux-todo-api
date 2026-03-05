@@ -12,8 +12,10 @@ import reactor.core.publisher.Mono;
 public class TodoHandler {
     private final TodoService todoService;
     public Mono<ServerResponse> getAllTodos(ServerRequest request){
+        int page = Integer.parseInt(request.queryParam("page").orElse("0"));
+        int size = Integer.parseInt(request.queryParam("size").orElse("20"));
        return ServerResponse.status(HttpStatus.OK).body(
-               todoService.findAll(),ResponseDto.class);
+               todoService.findAll(page,size),ResponseDto.class);
     }
     public Mono<ServerResponse> getTodo(ServerRequest request){
         Long id = Long.valueOf(request.pathVariable("id"));
