@@ -10,6 +10,7 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.web.reactive.server.WebTestClient;
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 
 @WebFluxTest
@@ -20,7 +21,7 @@ public class TodoHandlerTest {
     @MockBean
     private TodoService todoService;
     @Test
-    void testGetTodos(){
+    void shouldReturnTodos_whenGetTodosEndpointCalled(){
         when(todoService.findAll(anyInt(),anyInt()))
                 .thenReturn(Flux.just(
                         new ResponseDto(1L,"go gym",false),
@@ -33,4 +34,56 @@ public class TodoHandlerTest {
                 .expectBodyList(ResponseDto.class)
                 .hasSize(2);
     }
+
+    @Test
+    void shouldReturnTodo_whenGetTodoByIdEndpointCalled(){
+        when(todoService.findById(anyLong()))
+                .thenReturn(Mono.just(
+                        new ResponseDto(1L,"go gym",false)
+                ));
+        webTestClient.get()
+                .uri("/api/todos/1")
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody(ResponseDto.class);
+
+    }
+
+    @Test
+    void shouldCreateTodo_whenPostTodosEndpointCalled(){
+        RequestDto request = new RequestDto("go gym");
+        when(todoService.save(any(RequestDto.class)))
+                .thenReturn(Mono.just(
+                        new ResponseDto(1L,"go gym",false)
+                ));
+        webTestClient.post()
+                .uri("/api/todos")
+                .bodyValue(request)
+                .exchange()
+                .expectStatus().isCreated()
+                .expectBody(ResponseDto.class);
+    }
+
+    @Test
+    void shouldDeleteTodo_whenDeleteTodoEndpointCalled(){
+        when(todoService.deleteById(anyLong()))
+                .thenReturn(Mono.empty());
+        webTestClient.delete()
+                .uri("/api/todos/1")
+                .exchange()
+                .expectStatus().isNoContent();
+    }
+
+    @Test
+    void shouldUpdateTodo_whenUpdateTodoEndpointCalled(){
+        ResponseDto response = new ResponseDto(1L,"go gym",true);
+        when(todoService.updateTodoStatus(true,1L))
+                .thenReturn(Mono.just(response));
+        webTestClient.patch()
+                .uri("/api/todos/1")
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody(ResponseDto.class);
+    }
+
 }
