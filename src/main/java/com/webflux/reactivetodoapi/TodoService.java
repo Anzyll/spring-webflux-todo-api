@@ -1,12 +1,9 @@
 package com.webflux.reactivetodoapi;
 
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-
-import java.time.Duration;
 
 @Service
 @RequiredArgsConstructor
@@ -15,6 +12,7 @@ public class TodoService {
     public Flux<ResponseDto> findAll(int page,int size) {
         int offset = page * size;
        return todoRepository.findAllPaged(size,offset)
+               .doOnNext(todo -> System.out.println("todo : "+todo.getTitle()))
                .map(todo -> new ResponseDto(
                        todo.getId(),
                        todo.getTitle(),
@@ -29,7 +27,9 @@ public class TodoService {
                         todo.getTitle(),
                         todo.isCompleted()
                 ))
-                .switchIfEmpty(Mono.error(new TodoNotFoundException(id)));
+                .switchIfEmpty(Mono.error(new TodoNotFoundException(id)))
+                .checkpoint("todoService.findById")
+                .log();
     }
 
     public Mono<ResponseDto> save(RequestDto request) {
